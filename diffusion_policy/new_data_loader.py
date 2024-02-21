@@ -190,11 +190,10 @@ if __name__ == "__main__":
         pred_horizon=8,
         obs_horizon=2,
         action_horizon=8,
-        num_trajectories=100,
-        labels='/home/jacob/projects/serl-diffusion/labels.npy'
+        num_trajectories=22,
+        # labels='/home/jacob/projects/serl-diffusion/labels.npy'
     )
-    dataset1[1000]
-    print(len(np.load('/home/jacob/projects/serl-diffusion/labels.npy')))
+    # print(len(np.load('/home/jacob/projects/serl-diffusion/labels.npy')))
     print(len(dataset1))
     # dataset2 = SERLImageDataset(
     #     dataset_path=dataset_path,
