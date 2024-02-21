@@ -1,6 +1,6 @@
 import os
 import time
-from typing import List
+from typing import List, Union
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,7 +10,7 @@ from diffusers.training_utils import EMAModel
 from diffusers.optimization import get_scheduler
 from tqdm.auto import tqdm
 
-from diffusion_policy.dataset import SERLImageDataset
+from diffusion_policy.new_data_loader import SERLImageDataset
 from diffusion_policy.networks import ConditionalUnet1D, get_resnet, replace_bn_with_gn
 
 import hydra
@@ -24,21 +24,23 @@ from diffusion_policy.hydra_utils import ExperimentHydraConfig
 @dataclass
 class ImageTrainingScriptConfig:
     hydra: ExperimentHydraConfig = ExperimentHydraConfig()
-    num_trajs: int = 50
-    batch_size: int = 64
-    num_epochs: int = 10
-    checkpoint_path: str = "${hydra:runtime.cwd}/${checkpoint_name: ${num_trajs}}"
+    num_trajs: int = -1
+    batch_size: int = 128
+    num_epochs: int = 100
+    # These functions are defined in the hydras_utils.py file
+    # checkpoint_path: str = "${hydra:runtime.cwd}/${checkpoint_name: ${num_trajs}}"
+    checkpoint_path: str = "${hydra:runtime.cwd}/1000_states_checkpoint.pth"
     dataset_path: str = "${hydra:runtime.cwd}/peg_insert_100_demos_2024-02-11_13-35-54.pkl"
     with_state: bool = True
     state_len: int = 19
     action_dim: int = 6
-    
-    # parameters
-    pred_horizon = 16
-    obs_horizon = 2
-    action_horizon = 8
-    num_diffusion_iters = 100
-    num_cameras = 2
+    label_path: Union[str, None] = "${hydra:runtime.cwd}/labels.npy"
+    # parameter s
+    pred_horizon: int = 16
+    obs_horizon: int = 2
+    action_horizon: int = 8
+    num_diffusion_iters: int = 100
+    num_cameras: int = 2
 
 cs = hydra.core.config_store.ConfigStore.instance()
 cs.store(name="image_train_script", node=ImageTrainingScriptConfig)
@@ -65,6 +67,7 @@ def main(cfg: ImageTrainingScriptConfig):
         obs_horizon=obs_horizon,
         action_horizon=action_horizon,
         num_trajectories=cfg.num_trajs,
+        labels=cfg.label_path
     )
     stats = dataset.stats
 
