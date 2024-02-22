@@ -80,7 +80,7 @@ def main(cfg: TrainScriptConfig):
 
     checkpoint = torch.load(cfg.checkpoint_path, map_location='cuda')
     ema_nets = nets
-    ema_nets.load_state_dict(checkpoint['ema_nets'])
+    ema_nets.load_state_dict(checkpoint['state_dict'])
     print('Pretrained weights loaded.')
     stats = checkpoint['stats']
 
@@ -91,7 +91,7 @@ def main(cfg: TrainScriptConfig):
     from franka_env.envs.wrappers import (
         GripperCloseEnv,
         Quat2EulerWrapper,
-        SERLObsWrapperng
+        SERLObsWrapper
     )
 
     env = gym.make(
