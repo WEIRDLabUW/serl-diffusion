@@ -1,4 +1,5 @@
 import time
+
 import submitit
 
 
@@ -28,17 +29,16 @@ def main():
             job = executor.submit(add, 1, i)
             jobs.append(job)
 
-    while len(jobs) > 0:
+    while jobs:
+        done = []
         for i in range(len(jobs)):
             job = jobs[i]
             if job.done():
-                time.sleep(1)
+                done.append(i)
                 print(job.result())
-                jobs.pop(i)
-                break
+        for i in reversed(done):
+            del jobs[i]
 
 
 if __name__ == "__main__":
     main()
-
-
