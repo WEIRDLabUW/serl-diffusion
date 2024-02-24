@@ -3,6 +3,4 @@ torchvision==0.16.1
 hydra-core
 diffusers
 torchaudio
-tqdm
 submitit
-
