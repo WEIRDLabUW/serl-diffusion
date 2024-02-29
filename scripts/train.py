@@ -6,8 +6,10 @@ import torch
 import torch.nn as nn
 from tqdm.auto import tqdm
 
-from diffusion_policy.configs import DiffusionModelRunConfig
+from configs.definitions import DiffusionModelRunConfig
 from diffusion_policy.make_networks import instantiate_model_artifacts
+
+import wandb
 
 cs = hydra.core.config_store.ConfigStore.instance()
 cs.store(name="diffusion_model_run_cfg", node=DiffusionModelRunConfig)
@@ -98,6 +100,13 @@ def run_training(cfg: DiffusionModelRunConfig):
         'config': cfg
     }
     torch.save(checkpoint, cfg.checkpoint_path)
+
+def _write_wandb_metrics(self, locs, mean_std, fps):
+        iteration = locs['it']
+        metrics: Metrics = locs['metrics']
+        for value, write_name in zip(metrics.values, metrics.write_names):
+            wandb.log({write_name: value}, step=iteration)
+        wandb.log({'Loss/learning_rate': self.alg.learning_rate}, step=iteration)
 
 
 if __name__ == "__main__":

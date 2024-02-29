@@ -5,3 +5,4 @@ diffusers
 torchaudio
 tqdm
 submitit
+wandb
