@@ -1,4 +1,3 @@
-from typing import List
 import numpy as np
 import torch
 import torch.nn as nn
@@ -6,7 +5,7 @@ import collections
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from tqdm.auto import tqdm
 
-from diffusion_policy.dataset import SERLImageDataset, normalize_data, unnormalize_data
+from diffusion_policy.dataset import normalize_data, unnormalize_data
 from diffusion_policy.networks import ConditionalUnet1D, get_resnet, replace_bn_with_gn
 
 import hydra

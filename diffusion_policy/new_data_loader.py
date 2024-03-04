@@ -184,7 +184,7 @@ class SERLImageDataset(torch.utils.data.Dataset):
 
 
 if __name__ == "__main__":
-    dataset_path = '/home/jacob/projects/serl-diffusion/peg_insert_100_demos_2024-02-11_13-35-54.pkl'
+    dataset_path = '/peg_insert_100_demos_2024-02-11_13-35-54.pkl'
     dataset1 = SERLImageDataset(
         dataset_path=dataset_path,
         pred_horizon=8,
