@@ -58,10 +58,10 @@ class DiffusionModelRunConfig:
     hydra: ExperimentHydraConfig = ExperimentHydraConfig()
     dataset: DatasetConfig = DatasetConfig()
     device: str = "cuda"
-    checkpoint_path: str = "${hydra:runtime.cwd}/jacob_dataformat_image_propreo.pt"
+    checkpoint_path: str = "${hydra:runtime.cwd}/jacob_dataformat_image_propreo2.pt"
 
-    batch_size: int = 256//2
-    num_epochs: int = 16
+    batch_size: int = 256
+    num_epochs: int = 32
 
     # If with_state, uses the state keys. If without doesn't and state len does not matter
     with_state: bool = False
@@ -74,7 +74,7 @@ class DiffusionModelRunConfig:
     pred_horizon: int = 12
     obs_horizon: int = 4
     action_horizon: int = 8
-    num_diffusion_iters: int = 100
+    num_diffusion_iters: int = 16
 
 
 
