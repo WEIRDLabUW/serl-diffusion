@@ -28,11 +28,24 @@ class ImageDisplayer(threading.Thread):
             if img_array is None:  # None is our signal to exit
                 break
 
-            frame = np.concatenate(
-                [v for k, v in img_array.items() if "full" not in k], axis=0
-            )
+            # Extract images
+            images = [img_array.get(name) for name in ["wrist_1", "wrist_2", "front_view", "side_view"]]
 
-            cv2.imshow("RealSense Cameras", frame)
+            # Check for any None values in images
+            if any(img is None for img in images):
+                continue
+
+            # Resize images to be the same size (assumed to be 480x640 for all images)
+            target_size = (640, 480)
+            resized_images = [cv2.resize(img, target_size) for img in images]
+
+            # Stack images to create a 2x2 grid
+            top_row = np.hstack(resized_images[:2])
+            bottom_row = np.hstack(resized_images[2:])
+            grid_image = np.vstack([top_row, bottom_row])
+
+            # Display the grid image
+            cv2.imshow("RealSense Cameras", grid_image)
             cv2.waitKey(1)
 
 
@@ -46,6 +59,8 @@ class DefaultEnvConfig:
     REALSENSE_CAMERAS = {
         "wrist_1": "130322274175",
         "wrist_2": "127122270572",
+        "front_view": "207322251049",
+        "side_view": "213522250963"
     }
     TARGET_POSE: np.ndarray = np.zeros((6,))
     REWARD_THRESHOLD: np.ndarray = np.zeros((6,))
@@ -128,25 +143,36 @@ class FrankaEnv(gym.Env):
                 "state": gym.spaces.Dict(
                     {
                         "tcp_pose": gym.spaces.Box(
-                            -np.inf, np.inf, shape=(7,)
+                            low=-np.inf, high=np.inf, shape=(7,), dtype=np.float32
                         ),  # xyz + quat
-                        "tcp_vel": gym.spaces.Box(-np.inf, np.inf, shape=(6,)),
-                        "gripper_pose": gym.spaces.Box(-1, 1, shape=(1,)),
-                        "tcp_force": gym.spaces.Box(-np.inf, np.inf, shape=(3,)),
-                        "tcp_torque": gym.spaces.Box(-np.inf, np.inf, shape=(3,)),
+                        "tcp_vel": gym.spaces.Box(
+                            low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32
+                        ),
+                        "gripper_pose": gym.spaces.Box(
+                            low=-1, high=1, shape=(1,), dtype=np.float32
+                        ),
+                        "tcp_force": gym.spaces.Box(
+                            low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32
+                        ),
+                        "tcp_torque": gym.spaces.Box(
+                            low=-np.inf, high=np.inf, shape=(3,), dtype=np.float32
+                        ),
                     }
                 ),
                 "images": gym.spaces.Dict(
                     {
                         "wrist_1": gym.spaces.Box(
-                            0, 255, shape=(128, 128, 3), dtype=np.uint8
+                            low=0, high=255, shape=(480, 640, 3), dtype=np.uint8
                         ),
                         "wrist_2": gym.spaces.Box(
-                            0, 255, shape=(128, 128, 3), dtype=np.uint8
+                            low=0, high=255, shape=(480, 640, 3), dtype=np.uint8
                         ),
-                        # "agent_view_1": gym.spaces.Box(
-                        #     0, 255, shape=(128, 128, 3), dtype=np.uint8
-                        # ),
+                        "front_view": gym.spaces.Box(
+                            low=0, high=255, shape=(480, 640, 3), dtype=np.uint8
+                        ),
+                        "side_view": gym.spaces.Box(
+                            low=0, high=255, shape=(480, 640, 3), dtype=np.uint8
+                        ),
                     }
                 ),
             }
@@ -273,38 +299,96 @@ class FrankaEnv(gym.Env):
             return image[:, 80:560, :]
         elif name == "wrist_2":
             return image[:, 80:560, :]
+        elif name == "front_view":
+            return image[80:560, :, :]
+        elif name == "side_view":
+            return image[:, 80:560, :]
         # elif name == "agent_view_1":
         #     # The image is a 1280 × 800 image, crop to 800x800
         #     return image[:, 240:1040, :]
         else:
             return ValueError(f"Camera {name} not recognized in cropping")
 
+    
     def get_im(self):
         images = {}
         display_images = {}
+
+        # Define the target size for all images
+        target_width = 640
+        target_height = 480
+
         for key, cap in self.cap.items():
             try:
                 rgb = cap.read()
                 cropped_rgb = self.crop_image(key, rgb)
-                resized = cv2.resize(
-                    cropped_rgb, self.observation_space["images"][key].shape[:2][::-1]
-                )
-                images[key] = resized[..., ::-1]
+                resized = cv2.resize(cropped_rgb, (target_width, target_height))  # Resize to target size
+                images[key] = resized[..., ::-1]  # Convert BGR to RGB
                 display_images[key] = resized
                 display_images[key + "_full"] = cropped_rgb
-            except queue.Empty:
-                input(
-                    f"{key} camera frozen. Check connect, then press enter to relaunch..."
-                )
+            except Exception as e:
+                print(f"Error with {key} camera: {e}")
                 cap.close()
                 self.init_cameras(self.config.REALSENSE_CAMERAS)
                 return self.get_im()
 
-        self.recording_frames.append(
-            np.concatenate([display_images[f"{k}_full"] for k in self.cap], axis=0)
-        )
+        # Debugging: Print the sizes of the images
+        for key, img in display_images.items():
+            print(f"{key} size: {img.shape}")
+
+        # Ensure all images are resized to the same dimensions before concatenation
+        try:
+            resized_full_images = []
+            for key in self.cap:
+                img = display_images[f"{key}_full"]
+                if img.shape[:2] != (target_height, target_width):
+                    # Resize the image to fit the target size while preserving aspect ratio
+                    aspect_ratio = img.shape[1] / img.shape[0]
+                    if aspect_ratio > target_width / target_height:
+                        # Wider than target aspect ratio
+                        new_width = target_width
+                        new_height = int(target_width / aspect_ratio)
+                    else:
+                        # Taller than target aspect ratio
+                        new_height = target_height
+                        new_width = int(target_height * aspect_ratio)
+
+                    resized = cv2.resize(img, (new_width, new_height))
+                    
+                    # Add padding to ensure the image fits the target size
+                    top_padding = (target_height - new_height) // 2
+                    bottom_padding = target_height - new_height - top_padding
+                    left_padding = (target_width - new_width) // 2
+                    right_padding = target_width - new_width - left_padding
+
+                    padded_img = cv2.copyMakeBorder(
+                        resized,
+                        top_padding,
+                        bottom_padding,
+                        left_padding,
+                        right_padding,
+                        borderType=cv2.BORDER_CONSTANT,
+                        value=[0, 0, 0]  # Padding color (black)
+                    )
+                else:
+                    padded_img = img
+
+                resized_full_images.append(padded_img)
+
+            # Concatenate images along the vertical axis (axis=0)
+            concatenated_image = np.concatenate(resized_full_images, axis=0)
+            self.recording_frames.append(concatenated_image)
+        except ValueError as e:
+            print(f"Error concatenating images: {e}")
+            for key, img in display_images.items():
+                print(f"Image {key} shape: {img.shape}")
+
         self.img_queue.put(display_images)
         return images
+
+
+
+
 
     def _get_state(self):
         state_observation = {
@@ -320,7 +404,13 @@ class FrankaEnv(gym.Env):
         images = self.get_im()
         state_observation = self._get_state()
 
-        return copy.deepcopy(dict(images=images, state=state_observation))
+        observation = {
+            "images": images,
+            "state": state_observation
+        }
+        # return copy.deepcopy(dict(images=images, state=state_observation))
+        return observation
+
 
     def interpolate_move(self, goal, timeout):
         steps = int(timeout * self.hz)
@@ -375,16 +465,18 @@ class FrankaEnv(gym.Env):
             print(f"Failed to save video: {e}")
 
     def init_cameras(self, name_serial_dict=None):
-        """Init both wrist cameras."""
+        """Init all cameras."""
         if self.cap is not None:  # close cameras if they are already open
             self.close_cameras()
-
         self.cap = OrderedDict()
         for cam_name, cam_serial in name_serial_dict.items():
+            print(f"Next camera = {cam_name}, {cam_serial}")
             cap = VideoCapture(
                 RSCapture(name=cam_name, serial_number=cam_serial, depth=False)
             )
             self.cap[cam_name] = cap
+
+
 
     def close_cameras(self):
         """Close both wrist cameras."""

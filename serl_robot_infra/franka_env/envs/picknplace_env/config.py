@@ -5,11 +5,18 @@ from franka_env.envs.franka_env import DefaultEnvConfig
 class PickNPlaceConfig(DefaultEnvConfig):
     """Set the configuration for FrankaEnv."""
     SERVER_URL: str = "http://127.0.0.1:5000/"
+    # REALSENSE_CAMERAS = {
+    #     "wrist_1": "123622270810",
+    #     "wrist_2": "130322270807",
+    #     # "agent_view_1": "213522250963"
+    # }
     REALSENSE_CAMERAS = {
-        "wrist_1": "123622270810",
-        "wrist_2": "130322270807",
-        # "agent_view_1": "213522250963"
+        "wrist_1": "130322270807",
+        "wrist_2": "123622270810",
+        "front_view": "207322251049",
+        "side_view": "213522250963"
     }
+
     TARGET_POSE = None
     RESET_POSE = np.array(
         [
@@ -49,13 +56,13 @@ class PickNPlaceConfig(DefaultEnvConfig):
 
     COMPLIANCE_PARAM = {
         "translational_stiffness": 2000,
-        "translational_damping": 89,
-        "rotational_stiffness": 150,
-        "rotational_damping": 7,
+        "translational_damping": 100, # 89
+        "rotational_stiffness": 200,  # 150
+        "rotational_damping": 10, # 7
         "translational_Ki": 0,
-        "translational_clip_x": 0.006,
-        "translational_clip_y": 0.006,
-        "translational_clip_z": 0.005,
+        "translational_clip_x": 0.01, # 0.006
+        "translational_clip_y": 0.01, # 0.006
+        "translational_clip_z": 0.01, # 0.005
         "translational_clip_neg_x": 0.006,
         "translational_clip_neg_y": 0.006,
         "translational_clip_neg_z": 0.005,

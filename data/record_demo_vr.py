@@ -45,7 +45,7 @@ def main(arg):
     transitions = []
     success_count = 0
     # Change this to the number of demos you want to record
-    success_needed = 15
+    success_needed = 3
     pbar = tqdm(total=success_needed)
     controller = VRController()
     current_trajectory = []

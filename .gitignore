@@ -5,6 +5,7 @@ __pycache__/
 # checkpoints and hydra stuff:
 outputs/
 *.pt 
+*.pth
 *.ckpt
 # C extensions
 *.so
