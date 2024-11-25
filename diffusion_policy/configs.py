@@ -78,7 +78,7 @@ class DiffusionModelRunConfig:
     action_dim: int = 6
     pred_horizon: int = 16
     obs_horizon: int = 1
-    action_horizon: int = 8
+    action_horizon: int = 16
     num_diffusion_iters: int = 100
     num_eval_diffusion_iters: int = 16
 

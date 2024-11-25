@@ -126,7 +126,7 @@ class BaseDataset(torch.utils.data.Dataset):
 
 class JacobPickleDataset(BaseDataset):
     def __init__(self, dataset_path: str, pred_horizon: int, obs_horizon: int, action_horizon: int,
-                 num_trajectories: int, image_keys, state_keys, action_key="action"):
+                 num_trajectories: int, image_keys, state_keys, action_key="action", stats_=None, pad_after_=None):
         data = pickle.load(open(dataset_path, 'rb'))
 
         actions = []
@@ -177,19 +177,19 @@ class JacobPickleDataset(BaseDataset):
             episode_ends=episode_ends,
             sequence_length=pred_horizon,
             pad_before=obs_horizon - 1,
-            pad_after=action_horizon - 1)
+            pad_after=pad_after_ if pad_after_ is not None else action_horizon - 1)
 
         # compute statistics and normalized data to [-1,1]
-        stats = dict()
+        stats = stats_ or dict()
         normalized_train_data = dict()
         for key, data in train_data.items():
-            stats[key] = get_data_stats(data)
+            if key not in stats:
+                stats[key] = get_data_stats(data)
             normalized_train_data[key] = normalize_data(data, stats[key])
 
         # images are already normalized
         normalized_train_data['image'] = images
 
-        self.episode_ends = episode_ends
         self.indices = indices
         self.stats = stats
         self.normalized_train_data = normalized_train_data
@@ -200,20 +200,13 @@ class JacobPickleDataset(BaseDataset):
 
 class D4RLDataset(JacobPickleDataset):
     def __init__(self, dataset_path: str, pred_horizon: int, obs_horizon: int, action_horizon: int,
-                 num_trajectories: int, image_keys):
-        super().__init__(dataset_path, pred_horizon, obs_horizon, action_horizon, num_trajectories, image_keys, ["observations"], "actions")
+                 num_trajectories: int, image_keys, **kwargs):
+        super().__init__(dataset_path, pred_horizon, obs_horizon, action_horizon, num_trajectories, image_keys, ["observations"], "actions", **kwargs)
 
 class CCILDataset(BaseDataset):
     def __init__(self, demo_data_path: str, aug_data_path: str, pred_horizon: int, obs_horizon: int, action_horizon: int):
         self.demo_data = D4RLDataset(demo_data_path, pred_horizon, obs_horizon, action_horizon, -1, [])
-        self.aug_data = D4RLDataset(aug_data_path, pred_horizon, obs_horizon, action_horizon, -1, [])
-        self.aug_data.indices = create_sample_indices(
-            episode_ends=self.aug_data.episode_ends,
-            sequence_length=pred_horizon,
-            pad_before=obs_horizon - 1,
-            pad_after=0
-        )
-        breakpoint()
+        self.aug_data = D4RLDataset(aug_data_path, pred_horizon, obs_horizon, action_horizon, -1, [], stats_=self.demo_data.stats, pad_after_=0)
 
     @property
     def stats(self):
