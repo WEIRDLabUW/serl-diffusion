@@ -24,13 +24,13 @@ class DiffusionPolicy(object):
         self.nets = {k: v for k, v in nets.items()}
 
         # trace and optimize noise prediction network
-        noise_input = (torch.randn(1, config.pred_horizon, config.action_dim, device=device),
-                        torch.as_tensor(0, device=device),
-                        torch.randn(1, config.obs_horizon * config.state_len, device=device))
-        scripted_noise_net = torch.jit.trace_module(self.nets['noise_pred_net'].eval(), {
-            "forward": noise_input
-            })
-        self.nets['noise_pred_net'] = torch.jit.optimize_for_inference(scripted_noise_net)
+        # noise_input = (torch.randn(1, config.pred_horizon, config.action_dim, device=device),
+        #                 torch.as_tensor(0, device=device),
+        #                 torch.randn(1, config.obs_horizon * config.state_len, device=device))
+        # scripted_noise_net = torch.jit.trace_module(self.nets['noise_pred_net'].eval(), {
+        #     "forward": noise_input
+        #     })
+        # self.nets['noise_pred_net'] = torch.jit.optimize_for_inference(scripted_noise_net)
 
         self.noise_scheduler = noise_scheduler
         self.device = device

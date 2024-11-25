@@ -189,6 +189,7 @@ class JacobPickleDataset(BaseDataset):
         # images are already normalized
         normalized_train_data['image'] = images
 
+        self.episode_ends = episode_ends
         self.indices = indices
         self.stats = stats
         self.normalized_train_data = normalized_train_data
@@ -201,6 +202,31 @@ class D4RLDataset(JacobPickleDataset):
     def __init__(self, dataset_path: str, pred_horizon: int, obs_horizon: int, action_horizon: int,
                  num_trajectories: int, image_keys):
         super().__init__(dataset_path, pred_horizon, obs_horizon, action_horizon, num_trajectories, image_keys, ["observations"], "actions")
+
+class CCILDataset(BaseDataset):
+    def __init__(self, demo_data_path: str, aug_data_path: str, pred_horizon: int, obs_horizon: int, action_horizon: int):
+        self.demo_data = D4RLDataset(demo_data_path, pred_horizon, obs_horizon, action_horizon, -1, [])
+        self.aug_data = D4RLDataset(aug_data_path, pred_horizon, obs_horizon, action_horizon, -1, [])
+        self.aug_data.indices = create_sample_indices(
+            episode_ends=self.aug_data.episode_ends,
+            sequence_length=pred_horizon,
+            pad_before=obs_horizon - 1,
+            pad_after=0
+        )
+        breakpoint()
+
+    @property
+    def stats(self):
+        return self.demo_data.stats
+
+    def __len__(self):
+        return len(self.demo_data) + len(self.aug_data)
+
+    def __getitem__(self, idx):
+        if idx < len(self.demo_data):
+            return self.demo_data[idx]
+        else:
+            return self.aug_data[idx - len(self.demo_data)]
 
 class HD5PYDataset(BaseDataset):
     def __init__(self, dataset_path: str, pred_horizon: int, obs_horizon: int, action_horizon: int,

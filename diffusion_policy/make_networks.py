@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from diffusion_policy.networks import ConditionalUnet1D
 from diffusers import DDPMScheduler, EMAModel, get_scheduler
-from diffusion_policy.dataset import SERLImageDataset, HD5PYDataset, JacobPickleDataset, D4RLDataset
+from diffusion_policy.dataset import SERLImageDataset, HD5PYDataset, JacobPickleDataset, D4RLDataset, CCILDataset
 from diffusion_policy.networks import get_resnet, replace_bn_with_gn
 from diffusion_policy.configs import DiffusionModelRunConfig
 
@@ -91,6 +91,14 @@ def instantiate_model_artifacts(cfg: DiffusionModelRunConfig, model_only: bool =
             action_horizon=cfg.action_horizon,
             num_trajectories=cfg.dataset.num_traj,
             image_keys=cfg.dataset.image_keys
+        )
+    elif cfg.dataset.type == "CCIL":
+        dataset = CCILDataset(
+            demo_data_path=cfg.dataset.demo_dataset_path,
+            aug_data_path=cfg.dataset.aug_dataset_path,
+            pred_horizon=cfg.pred_horizon,
+            obs_horizon=cfg.obs_horizon,
+            action_horizon=cfg.action_horizon,
         )
     else:
         raise ValueError(f"Dataset type {cfg.dataset.type} not recognized. Options are SERL or HDF5 or Jacob or D4RL.)")
